@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
@@ -20,6 +21,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import java.time.LocalDateTime;
@@ -185,6 +187,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
 
 
+    }
+
+    @Override
+    public Result logout(HttpServletRequest request) {
+
+        //1. 从请求头拿 token
+        String token = request.getHeader("authorization");
+        if (StrUtil.isBlank(token)) {
+            UserHolder.removeUser();
+            return Result.ok();
+        }
+
+        //2. 删除 Redis 中的登录信息
+        stringRedisTemplate.delete(LOGIN_USER_KEY + token);
+
+        //3. 清理 ThreadLocal 用户信息
+        UserHolder.removeUser();
+
+        return Result.ok();
     }
 
     private User createUserWithPhone(String phone) {
